@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
-const MODEL = process.env.GEMINI_VEO_MODEL || "veo-3.0-fast-generate-001";
+// Veo 2 — відео без аудіо, тож не впирається в аудіо-фільтр Veo 3 (надійніше для демо).
+const MODEL = process.env.GEMINI_VEO_MODEL || "veo-2.0-generate-001";
 
 function key(): string {
   const k = process.env.GEMINI_API_KEY;
