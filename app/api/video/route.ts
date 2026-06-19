@@ -33,6 +33,7 @@ export async function POST(req: Request) {
 
   const videoPrompt =
     "Vertical 9:16 short-form UGC-style dating app video ad, ~8 seconds. " +
+    "No spoken dialogue; soft ambient background music only. " +
     "All on-screen text and captions in ENGLISH. Authentic, mobile-shot, cinematic feel.\n\nBrief:\n" +
     prompt.slice(0, 1500);
 
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         instances: [{ prompt: videoPrompt }],
-        parameters: { aspectRatio: "9:16", personGeneration: "allow_adult" },
+        parameters: { aspectRatio: "9:16" },
       }),
     });
     if (!res.ok) throw new Error(`Veo ${res.status}: ${await res.text()}`);
