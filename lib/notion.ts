@@ -104,12 +104,17 @@ export async function getCreative(pageId: string): Promise<Creative> {
 }
 
 /** Наші ефективні: «📈 Creo Result» не порожнє (Okay/Good/Super). */
-export async function listWinners(limit = 6): Promise<Creative[]> {
+export async function listWinners(limit = 12): Promise<Creative[]> {
   const id = process.env.NOTION_DB_OURS;
   if (!id) throw new Error("NOTION_DB_OURS не заданий");
   const rows = await queryDb(id, {
-    page_size: limit,
+    page_size: 40,
     filter: { property: "📈 Creo Result", select: { is_not_empty: true } },
   });
-  return rows.map(mapCreative);
+  const rank: Record<string, number> = { Super: 3, Good: 2, Okay: 1 };
+  // найкращі за Creo Result — першими, щоб модель грунтувалась на топ-патернах
+  return rows
+    .map(mapCreative)
+    .sort((a, b) => (rank[b.creoResult ?? ""] ?? 0) - (rank[a.creoResult ?? ""] ?? 0))
+    .slice(0, limit);
 }
