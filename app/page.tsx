@@ -232,34 +232,42 @@ export default function Workspace() {
             {competitors.length > 0 && (
               <div className="ws-pick">
                 {competitors.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={"ws-card" + (selectedId === c.id ? " is-active" : "")}
-                    onClick={() => setSelectedId((id) => (id === c.id ? "" : c.id))}
-                    title={[c.competitor, c.name].filter(Boolean).join(" · ")}
-                  >
-                    <span className="ws-card-thumb">
-                      <span className="ws-card-noimg">
-                        {c.format || "креатив"}
-                        <em>прев&apos;ю недоступне</em>
+                  <div key={c.id} className="ws-card-wrap">
+                    <button
+                      type="button"
+                      className={"ws-card" + (selectedId === c.id ? " is-active" : "")}
+                      onClick={() => setSelectedId((id) => (id === c.id ? "" : c.id))}
+                      title={[c.competitor, c.name].filter(Boolean).join(" · ")}
+                    >
+                      <span className="ws-card-thumb">
+                        <span className="ws-card-noimg">{c.format || "креатив"}</span>
+                        {c.thumb && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            className="ws-card-img"
+                            src={c.thumb}
+                            alt={c.name}
+                            loading="lazy"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        )}
+                        {c.competitor && <span className="ws-card-badge">{c.competitor}</span>}
                       </span>
-                      {c.thumb && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          className="ws-card-img"
-                          src={c.thumb}
-                          alt={c.name}
-                          loading="lazy"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
-                        />
-                      )}
-                      {c.competitor && <span className="ws-card-badge">{c.competitor}</span>}
-                    </span>
-                    <span className="ws-card-name">{c.name}</span>
-                  </button>
+                      <span className="ws-card-name">{c.name}</span>
+                    </button>
+                    {c.driveLink && (
+                      <a
+                        className="ws-card-link"
+                        href={c.driveLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        ↗ Відкрити в Drive
+                      </a>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
@@ -469,6 +477,9 @@ const CSS = `
   align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;
   color:var(--muted);text-transform:uppercase;}
 .ws-card-noimg em{font-style:normal;font-size:9px;opacity:.65;text-transform:none;}
+.ws-card-wrap{display:flex;flex-direction:column;gap:4px;}
+.ws-card-link{font-size:11px;color:var(--accent);text-decoration:none;padding:0 2px;align-self:flex-start;}
+.ws-card-link:hover{text-decoration:underline;}
 .ws-card-badge{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.62);color:#fff;
   font-size:10px;padding:2px 7px;border-radius:6px;font-weight:500;}
 .ws-card-name{font-size:11px;line-height:1.3;padding:7px 8px;color:var(--ink);

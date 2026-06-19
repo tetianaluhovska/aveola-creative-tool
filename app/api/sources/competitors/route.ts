@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { listCompetitorCreatives } from "@/lib/notion";
 
-// Drive link → наш проксі-прев'ю (сервер тягне через service account, файл лишається приватним)
+// Drive link → публічний thumbnail (покажеться для відкритих файлів; решта — плейсхолдер + лінк на Drive)
 function driveThumb(url: string): string | null {
   if (!url) return null;
   const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  return m ? `/api/thumb?id=${m[1]}` : null;
+  return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w600` : null;
 }
 
 export async function GET() {

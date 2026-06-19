@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { runAI } from "@/lib/ai";
 
-const SAFE_SYSTEM = `You turn a marketing creative brief into ONE concise video prompt for Google Veo — an ad for a social video-chat / meet-new-people mobile app (Aveola).
-Output ONLY the video prompt (3-5 sentences), nothing else.
-Stay FAITHFUL to the brief: keep the same setting, character(s), mood and the key on-screen captions. Translate captions to short punchy ENGLISH and place them as bold on-screen text. You may show the phone and app UI (chat list, "Online now", an incoming message, profile cards).
-Make it vertical 9:16, ~8 seconds, authentic UGC mobile-shot feel.
-KEEP IT ADVERTISING-SAFE: no nudity, nothing sexual or suggestive, no explicit romantic/dating solicitation. Reframe risky phrasing (e.g. "real girls waiting for you") into brand-safe equivalents ("new people to chat with", "new messages waiting"). Friendly, upbeat, advertising-safe.`;
+const SAFE_SYSTEM = `You turn ONE creative-variation brief into a single, vivid video prompt for Google Veo — an ad for a social video-chat / meet-new-people app (Aveola).
+Output ONLY the video prompt (4-6 sentences), nothing else.
+Build the scene FAITHFULLY from the brief's "Hook Visual" and "Body Visual": same setting, character, action and pacing. Structure as ~8s vertical 9:16 UGC mobile-shot — opening beat delivers the hook, middle shows the app in use (chat list, "Online now", an incoming message, profile cards), end shows the CTA.
+ON-SCREEN ENGLISH captions (bold, large): use the brief's Hook line as the opening caption and the CTA as the closing caption; keep them short and punchy.
+No spoken dialogue; soft ambient music.
+ADVERTISING-SAFE: no nudity, nothing sexual or suggestive, no explicit romantic/dating solicitation. Soften risky phrasing (e.g. "real girls waiting") into brand-safe equivalents ("new people to chat with", "new messages waiting"). Friendly, authentic, upbeat.`;
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 // Veo 2 — відео без аудіо, тож не впирається в аудіо-фільтр Veo 3 (надійніше для демо).
