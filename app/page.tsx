@@ -24,7 +24,7 @@ type CompetitorOption = {
 function splitVariations(text: string): string[] {
   if (!text) return [];
   const parts = text
-    .split(/\n(?=\s*\*\*\s*(?:Варіація|Variation)\b)/i)
+    .split(/\n(?=\s*\*\*\s*(?:Варіація|Variation)\s*\d)/i)
     .map((s) => s.trim())
     .filter(Boolean);
   return parts.length ? parts : [text];
