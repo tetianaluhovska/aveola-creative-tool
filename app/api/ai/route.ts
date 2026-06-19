@@ -2,6 +2,39 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { runAI } from "@/lib/ai";
+import { getCreative, listWinners, type Creative } from "@/lib/notion";
+
+function fmtCreative(c: Creative): string {
+  return [
+    `Назва: ${c.name}`,
+    c.competitor ? `Конкурент: ${c.competitor}` : null,
+    c.creoResult ? `Результат (Creo): ${c.creoResult}` : null,
+    `Платформа/Формат: ${c.platform || "?"} / ${c.format || "?"}`,
+    c.hook ? `Hook: ${c.hook}` : null,
+    c.hookVisual ? `Hook Visual: ${c.hookVisual}` : null,
+    c.bodyVisual ? `Body Visual: ${c.bodyVisual}` : null,
+    c.cta ? `CTA: ${c.cta}` : null,
+    c.ctaVisual ? `CTA Visual: ${c.ctaVisual}` : null,
+    c.aiDescription ? `AI Description: ${c.aiDescription}` : null,
+    c.transcript ? `Transcript: ${c.transcript}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+const SYSTEM = `Ти креативний стратег performance-маркетингу дейтинг-додатку Aveola.
+Тобі дають КРЕАТИВ КОНКУРЕНТА і приклади НАШИХ ефективних креативів (з оцінкою Creo Result: Okay/Good/Super).
+Згенеруй РІВНО 3 варіації-брифи для тесту: візьми сильну ідею конкурента й адаптуй під патерни, що вже спрацювали в нас.
+
+Формат кожної варіації (markdown, без преамбул):
+**Варіація N — <коротка назва>**
+- Hook (текст): ...
+- Hook Visual: ...
+- Body Visual: ...
+- CTA: ...
+- Чому спрацює: <опора на конкретний патерн наших виграшних>
+
+Пиши стисло, конкретно, українською.`;
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -9,21 +42,50 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { input } = (await req.json()) as { input?: string };
-  if (!input || !input.trim()) {
-    return NextResponse.json({ error: "input is required" }, { status: 400 });
+  const { competitorId, input } = (await req.json()) as {
+    competitorId?: string;
+    input?: string;
+  };
+
+  try {
+    // 1) Блок конкурента: або з Notion (за id), або з ручного вводу
+    let competitorBlock = (input ?? "").trim();
+    if (competitorId) {
+      const c = await getCreative(competitorId);
+      competitorBlock = fmtCreative(c);
+    }
+    if (!competitorBlock) {
+      return NextResponse.json(
+        { error: "Потрібен competitorId або input" },
+        { status: 400 },
+      );
+    }
+
+    // 2) Наші виграшні як контекст (м'яка деградація, якщо Notion недоступний)
+    let winnersBlock = "(приклади недоступні — генеруй за best practices Aveola)";
+    try {
+      const winners = await listWinners(6);
+      if (winners.length) winnersBlock = winners.map(fmtCreative).join("\n---\n");
+    } catch {
+      /* Notion ще не підключений */
+    }
+
+    // 3) Генерація
+    const prompt = `КРЕАТИВ КОНКУРЕНТА:\n${competitorBlock}\n\n=== НАШІ ЕФЕКТИВНІ КРЕАТИВИ (орієнтир) ===\n${winnersBlock}\n\nЗгенеруй 3 варіації-брифи.`;
+    const output = await runAI(prompt, SYSTEM);
+
+    const userId = (session.user as { id?: string }).id;
+    const entry = await prisma.entry.create({
+      data: {
+        userId: userId!,
+        input: competitorBlock,
+        output,
+        meta: competitorId ? { competitorId } : undefined,
+      },
+    });
+
+    return NextResponse.json({ entry });
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-
-  // 🔌 ВОРКШОП: тут зібрати промт із даних Notion
-  //   (креатив конкурента з NOTION_DB_COMPETITORS + наші виграшні з NOTION_DB_OURS,
-  //    фільтр "📈 Creo Result" не порожнє) і покликати runAI зі спеціальним system-промтом,
-  //    щоб згенерувати варіації-брифи. Поки — базова обробка вводу, щоб демо працювало.
-  const output = await runAI(input);
-
-  const userId = (session.user as { id?: string }).id;
-  const entry = await prisma.entry.create({
-    data: { userId: userId!, input, output },
-  });
-
-  return NextResponse.json({ entry });
 }

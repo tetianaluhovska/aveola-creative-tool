@@ -10,10 +10,20 @@ type Entry = {
   createdAt: string;
 };
 
+type CompetitorOption = {
+  id: string;
+  name: string;
+  competitor?: string;
+  platform?: string;
+  format?: string;
+};
+
 export default function Workspace() {
   const { data: session, status } = useSession();
   const user = session?.user ?? null;
 
+  const [competitors, setCompetitors] = useState<CompetitorOption[]>([]);
+  const [selectedId, setSelectedId] = useState("");
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -32,19 +42,34 @@ export default function Workspace() {
     }
   }, []);
 
-  // після входу — підтягнути історію з БД (відновлення прогресу)
+  const loadCompetitors = useCallback(async () => {
+    try {
+      const r = await fetch("/api/sources/competitors");
+      if (!r.ok) return;
+      const data = await r.json();
+      setCompetitors(data.items ?? []);
+    } catch {
+      /* Notion ще не підключений — лишається ручний ввід */
+    }
+  }, []);
+
+  // після входу — підтягнути історію з БД (відновлення прогресу) + список конкурентів
   useEffect(() => {
-    if (status === "authenticated") loadHistory();
+    if (status === "authenticated") {
+      loadHistory();
+      loadCompetitors();
+    }
     if (status === "unauthenticated") {
       setHistory([]);
       setResult(null);
       setInput("");
+      setSelectedId("");
       setActiveId(null);
     }
-  }, [status, loadHistory]);
+  }, [status, loadHistory, loadCompetitors]);
 
   async function run() {
-    if (!input.trim() || running) return;
+    if ((!input.trim() && !selectedId) || running) return;
     setRunning(true);
     setError(null);
     setResult(null);
@@ -53,7 +78,7 @@ export default function Workspace() {
       const r = await fetch("/api/ai", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ input }),
+        body: JSON.stringify(selectedId ? { competitorId: selectedId } : { input }),
       });
       if (!r.ok) throw new Error(String(r.status));
       const { entry } = (await r.json()) as { entry: Entry };
@@ -75,6 +100,7 @@ export default function Workspace() {
   }
   function newRun() {
     setInput("");
+    setSelectedId("");
     setResult(null);
     setActiveId(null);
     setError(null);
@@ -129,19 +155,43 @@ export default function Workspace() {
               <p className="ws-eyebrow">ввід</p>
               <button className="ws-btn-ghost ws-sm" onClick={newRun}>Новий запуск</button>
             </div>
-            <h2 className="ws-panel-title">Що обробляємо?</h2>
+            <h2 className="ws-panel-title">Креатив конкурента → варіації</h2>
             <p className="ws-panel-hint">
-              Встав текст / метрики / опис креатива. Заміни підпис під свою ідею.
+              Обери креатив конкурента з Notion або встав опис вручну.
             </p>
+            {competitors.length > 0 && (
+              <select
+                className="ws-select"
+                value={selectedId}
+                onChange={(e) => setSelectedId(e.target.value)}
+              >
+                <option value="">— обрати креатив конкурента —</option>
+                {competitors.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {[c.competitor, c.name, c.platform].filter(Boolean).join(" · ")}
+                  </option>
+                ))}
+              </select>
+            )}
             <textarea
               className="ws-input"
-              placeholder="Наприклад: опис креатива конкурента, метрики кампаній за день, текст лендінгу…"
+              placeholder={
+                selectedId
+                  ? "Обрано креатив з Notion. Можеш лишити порожнім або додати нотатки."
+                  : "Опис креатива конкурента: hook, меседж, візуал, CTA…"
+              }
               value={input}
               onChange={(e) => setInput(e.target.value)}
             />
             <div className="ws-actions">
-              <span className="ws-counter">{input.length} символів</span>
-              <button className="ws-run" onClick={run} disabled={running || !input.trim()}>
+              <span className="ws-counter">
+                {selectedId ? "обрано з Notion" : `${input.length} символів`}
+              </span>
+              <button
+                className="ws-run"
+                onClick={run}
+                disabled={running || (!input.trim() && !selectedId)}
+              >
                 {running ? <><span className="ws-spin" /> Обробка…</> : "Запустити AI"}
               </button>
             </div>
@@ -274,6 +324,11 @@ const CSS = `
   border-radius:10px;padding:12px 14px;font:inherit;font-size:14px;line-height:1.5;
   background:#FBFCFE;color:var(--ink);outline:none;transition:border-color .15s;}
 .ws-input:focus{border-color:var(--accent);}
+
+.ws-select{width:100%;margin-bottom:10px;border:1px solid var(--line);border-radius:10px;
+  padding:10px 12px;font:inherit;font-size:14px;background:#FBFCFE;color:var(--ink);
+  outline:none;cursor:pointer;transition:border-color .15s;}
+.ws-select:focus{border-color:var(--accent);}
 
 .ws-actions{display:flex;justify-content:space-between;align-items:center;margin-top:14px;}
 .ws-counter{font-family:var(--mono);font-size:11px;color:var(--muted);}
