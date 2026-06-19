@@ -36,6 +36,7 @@ export default function Workspace() {
 
   const [competitors, setCompetitors] = useState<CompetitorOption[]>([]);
   const [selectedId, setSelectedId] = useState("");
+  const [compFilter, setCompFilter] = useState("");
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -127,6 +128,7 @@ export default function Workspace() {
       setResult(null);
       setInput("");
       setSelectedId("");
+      setCompFilter("");
       setActiveId(null);
     }
   }, [status, loadHistory, loadCompetitors]);
@@ -179,6 +181,12 @@ export default function Workspace() {
   };
 
   const variations = result ? splitVariations(result) : [];
+  const competitorNames = Array.from(
+    new Set(competitors.map((c) => c.competitor).filter(Boolean) as string[]),
+  ).sort();
+  const shownCompetitors = compFilter
+    ? competitors.filter((c) => c.competitor === compFilter)
+    : competitors;
 
   return (
     <div className="ws-app">
@@ -230,8 +238,30 @@ export default function Workspace() {
                 : "Підключи Notion, щоб підтягнути візуали конкурентів. Поки доступний ручний ввід нижче."}
             </p>
             {competitors.length > 0 && (
-              <div className="ws-pick">
-                {competitors.map((c) => (
+              <>
+                {competitorNames.length > 1 && (
+                  <div className="ws-cfilter">
+                    <button
+                      type="button"
+                      className={"ws-fchip" + (compFilter === "" ? " is-active" : "")}
+                      onClick={() => setCompFilter("")}
+                    >
+                      Усі
+                    </button>
+                    {competitorNames.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className={"ws-fchip" + (compFilter === name ? " is-active" : "")}
+                        onClick={() => setCompFilter((f) => (f === name ? "" : name))}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="ws-pick">
+                  {shownCompetitors.map((c) => (
                   <div key={c.id} className="ws-card-wrap">
                     <button
                       type="button"
@@ -268,8 +298,9 @@ export default function Workspace() {
                       </a>
                     )}
                   </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
             <textarea
               className="ws-input ws-input-sm"
@@ -464,6 +495,11 @@ const CSS = `
 
 .ws-input-sm{min-height:60px;flex:none;}
 
+.ws-cfilter{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.ws-fchip{background:transparent;border:1px solid var(--line);border-radius:999px;padding:5px 12px;
+  font-size:12px;color:var(--ink);cursor:pointer;transition:border-color .15s,background .15s,color .15s;}
+.ws-fchip:hover{border-color:#c4cad6;}
+.ws-fchip.is-active{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:600;}
 .ws-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;
   max-height:340px;overflow:auto;padding:2px;margin-bottom:12px;}
 .ws-card{padding:0;border:1px solid var(--line);border-radius:12px;background:var(--surface);
