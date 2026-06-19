@@ -20,6 +20,16 @@ type CompetitorOption = {
   driveLink?: string;
 };
 
+// Розбити відповідь AI на окремі варіації за заголовком "**Варіація N"
+function splitVariations(text: string): string[] {
+  if (!text) return [];
+  const parts = text
+    .split(/\n(?=\s*\*\*\s*(?:Варіація|Variation)\b)/i)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return parts.length ? parts : [text];
+}
+
 export default function Workspace() {
   const { data: session, status } = useSession();
   const user = session?.user ?? null;
@@ -36,6 +46,7 @@ export default function Workspace() {
   const [videoState, setVideoState] = useState<"idle" | "working" | "ready" | "error">("idle");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoErr, setVideoErr] = useState<string | null>(null);
+  const [videoVarIdx, setVideoVarIdx] = useState(0);
   const videoRunRef = useRef(0);
 
   function resetVideo() {
@@ -43,6 +54,7 @@ export default function Workspace() {
     setVideoState("idle");
     setVideoUrl(null);
     setVideoErr(null);
+    setVideoVarIdx(0);
   }
 
   async function genVideo() {
@@ -52,10 +64,12 @@ export default function Workspace() {
     setVideoUrl(null);
     setVideoErr(null);
     try {
+      const vars = splitVariations(result);
+      const promptText = vars[videoVarIdx] ?? result;
       const r = await fetch("/api/video", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt: result }),
+        body: JSON.stringify({ prompt: promptText }),
       });
       const data = await r.json();
       if (!r.ok || data.error) throw new Error(data.error || "Не вдалося стартувати генерацію.");
@@ -163,6 +177,8 @@ export default function Workspace() {
     const d = new Date(iso);
     return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("uk-UA");
   };
+
+  const variations = result ? splitVariations(result) : [];
 
   return (
     <div className="ws-app">
@@ -306,15 +322,36 @@ export default function Workspace() {
 
             {!running && !error && result && (
               <div className="ws-video">
-                {videoState !== "ready" && (
-                  <button className="ws-vbtn" onClick={genVideo} disabled={videoState === "working"}>
-                    {videoState === "working" ? (
-                      <><span className="ws-spin" /> Генерую відео Veo (1–3 хв)…</>
-                    ) : (
-                      "🎬 Згенерувати відео (Veo)"
-                    )}
-                  </button>
+                {variations.length > 1 && (
+                  <div className="ws-vsel">
+                    <span className="ws-vsel-label">Відео для:</span>
+                    {variations.map((_, i) => (
+                      <button
+                        key={i}
+                        className={"ws-chip" + (videoVarIdx === i ? " is-active" : "")}
+                        disabled={videoState === "working"}
+                        onClick={() => {
+                          setVideoVarIdx(i);
+                          videoRunRef.current++;
+                          setVideoState("idle");
+                          setVideoUrl(null);
+                          setVideoErr(null);
+                        }}
+                      >
+                        Варіація {i + 1}
+                      </button>
+                    ))}
+                  </div>
                 )}
+                <button className="ws-vbtn" onClick={genVideo} disabled={videoState === "working"}>
+                  {videoState === "working" ? (
+                    <><span className="ws-spin" /> Генерую відео Veo (1–2 хв)…</>
+                  ) : videoState === "ready" ? (
+                    "↻ Перегенерувати відео"
+                  ) : (
+                    "🎬 Згенерувати відео (Veo)"
+                  )}
+                </button>
                 {videoState === "error" && <p className="ws-verr">{videoErr}</p>}
                 {videoState === "ready" && videoUrl && (
                   <video className="ws-player" src={videoUrl} controls autoPlay loop playsInline />
@@ -474,6 +511,13 @@ const CSS = `
   align-items:center;gap:8px;transition:opacity .15s;}
 .ws-vbtn:disabled{opacity:.6;cursor:not-allowed;}
 .ws-verr{color:var(--danger);font-size:12px;margin:0;}
+.ws-vsel{display:flex;flex-wrap:wrap;align-items:center;gap:7px;}
+.ws-vsel-label{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+.ws-chip{background:transparent;border:1px solid var(--line);border-radius:8px;padding:6px 11px;
+  font-size:12px;color:var(--ink);cursor:pointer;transition:border-color .15s,background .15s;}
+.ws-chip:hover:not(:disabled){border-color:#c4cad6;}
+.ws-chip.is-active{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600;}
+.ws-chip:disabled{opacity:.5;cursor:not-allowed;}
 .ws-player{width:100%;max-width:300px;border-radius:12px;border:1px solid var(--line);align-self:flex-start;}
 
 /* history */
