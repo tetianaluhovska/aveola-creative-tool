@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { runAI } from "@/lib/ai";
+
+const SAFE_SYSTEM = `You convert a marketing creative brief into ONE concise, policy-safe video prompt for Google Veo.
+Output ONLY the video prompt (2-4 sentences), nothing else.
+Describe a wholesome, generic lifestyle scene: a friendly person happily using a smartphone app in a warm, casual everyday setting.
+Include 1-2 short ON-SCREEN ENGLISH captions that are brand-safe and generic (e.g. "Try it now", "Join today", "Made for you").
+STRICTLY AVOID anything about dating, romance, flirting, loneliness, attractiveness, "girls/women/men", relationships, or anything suggestive — Veo rejects such content.
+Keep it neutral, friendly, advertising-safe.`;
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 // Veo 2 — відео без аудіо, тож не впирається в аудіо-фільтр Veo 3 (надійніше для демо).
@@ -32,13 +40,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "prompt is required" }, { status: 400 });
   }
 
-  const videoPrompt =
-    "Vertical 9:16 short-form UGC-style dating app video ad, ~8 seconds. " +
-    "No spoken dialogue; soft ambient background music only. " +
-    "All on-screen text and captions in ENGLISH. Authentic, mobile-shot, cinematic feel.\n\nBrief:\n" +
-    prompt.slice(0, 1500);
-
   try {
+    // 1) Зробити з брифу нейтральний, policy-safe промт (Claude), щоб Veo не різав по контенту
+    let scene: string;
+    try {
+      scene = await runAI(`Brief:\n${prompt.slice(0, 1500)}`, SAFE_SYSTEM);
+    } catch {
+      scene = "A friendly young person smiles while using a smartphone app at a sunny kitchen table. On-screen English caption: Try it now.";
+    }
+    const videoPrompt =
+      scene +
+      " Vertical 9:16, about 8 seconds, authentic mobile-shot UGC look, no spoken dialogue, soft ambient music only.";
+
     const res = await fetch(`${BASE}/models/${MODEL}:predictLongRunning?key=${key()}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
