@@ -21,7 +21,7 @@ export async function runAI(prompt: string, system?: string): Promise<string> {
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
-      max_tokens: 4096,
+      max_tokens: 10000,
       system:
         system ??
         "Ти асистент, що допомагає автоматизувати рутинні задачі. Відповідай стисло і структуровано українською.",
