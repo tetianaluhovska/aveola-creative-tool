@@ -2,12 +2,11 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { runAI } from "@/lib/ai";
 
-const SAFE_SYSTEM = `You convert a marketing creative brief into ONE concise, policy-safe video prompt for Google Veo.
-Output ONLY the video prompt (2-4 sentences), nothing else.
-Describe a wholesome, generic lifestyle scene: a friendly person happily using a smartphone app in a warm, casual everyday setting.
-Include 1-2 short ON-SCREEN ENGLISH captions that are brand-safe and generic (e.g. "Try it now", "Join today", "Made for you").
-STRICTLY AVOID anything about dating, romance, flirting, loneliness, attractiveness, "girls/women/men", relationships, or anything suggestive — Veo rejects such content.
-Keep it neutral, friendly, advertising-safe.`;
+const SAFE_SYSTEM = `You turn a marketing creative brief into ONE concise video prompt for Google Veo — an ad for a social video-chat / meet-new-people mobile app (Aveola).
+Output ONLY the video prompt (3-5 sentences), nothing else.
+Stay FAITHFUL to the brief: keep the same setting, character(s), mood and the key on-screen captions. Translate captions to short punchy ENGLISH and place them as bold on-screen text. You may show the phone and app UI (chat list, "Online now", an incoming message, profile cards).
+Make it vertical 9:16, ~8 seconds, authentic UGC mobile-shot feel.
+KEEP IT ADVERTISING-SAFE: no nudity, nothing sexual or suggestive, no explicit romantic/dating solicitation. Reframe risky phrasing (e.g. "real girls waiting for you") into brand-safe equivalents ("new people to chat with", "new messages waiting"). Friendly, upbeat, advertising-safe.`;
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 // Veo 2 — відео без аудіо, тож не впирається в аудіо-фільтр Veo 3 (надійніше для демо).
