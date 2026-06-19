@@ -16,6 +16,8 @@ type CompetitorOption = {
   competitor?: string;
   platform?: string;
   format?: string;
+  thumb?: string | null;
+  driveLink?: string;
 };
 
 export default function Workspace() {
@@ -120,8 +122,8 @@ export default function Workspace() {
       <header className="ws-bar">
         <div className="ws-brand">
           <span className="ws-mark" aria-hidden>◑</span>
-          <span className="ws-brand-name">Верстак</span>
-          <span className="ws-brand-sub">AI Workshop</span>
+          <span className="ws-brand-name">Aveola</span>
+          <span className="ws-brand-sub">Creative Variations</span>
         </div>
         {user && (
           <div className="ws-user">
@@ -155,30 +157,49 @@ export default function Workspace() {
               <p className="ws-eyebrow">ввід</p>
               <button className="ws-btn-ghost ws-sm" onClick={newRun}>Новий запуск</button>
             </div>
-            <h2 className="ws-panel-title">Креатив конкурента → варіації</h2>
+            <h2 className="ws-panel-title">Обери креатив конкурента</h2>
             <p className="ws-panel-hint">
-              Обери креатив конкурента з Notion або встав опис вручну.
+              {competitors.length > 0
+                ? "Клікни візуал — Claude згенерує варіації на основі наших виграшних креативів."
+                : "Підключи Notion, щоб підтягнути візуали конкурентів. Поки доступний ручний ввід нижче."}
             </p>
             {competitors.length > 0 && (
-              <select
-                className="ws-select"
-                value={selectedId}
-                onChange={(e) => setSelectedId(e.target.value)}
-              >
-                <option value="">— обрати креатив конкурента —</option>
+              <div className="ws-pick">
                 {competitors.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {[c.competitor, c.name, c.platform].filter(Boolean).join(" · ")}
-                  </option>
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={"ws-card" + (selectedId === c.id ? " is-active" : "")}
+                    onClick={() => setSelectedId((id) => (id === c.id ? "" : c.id))}
+                    title={[c.competitor, c.name].filter(Boolean).join(" · ")}
+                  >
+                    <span className="ws-card-thumb">
+                      {c.thumb ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={c.thumb}
+                          alt={c.name}
+                          loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <span className="ws-card-noimg">{c.format || "—"}</span>
+                      )}
+                      {c.competitor && <span className="ws-card-badge">{c.competitor}</span>}
+                    </span>
+                    <span className="ws-card-name">{c.name}</span>
+                  </button>
                 ))}
-              </select>
+              </div>
             )}
             <textarea
-              className="ws-input"
+              className="ws-input ws-input-sm"
               placeholder={
                 selectedId
-                  ? "Обрано креатив з Notion. Можеш лишити порожнім або додати нотатки."
-                  : "Опис креатива конкурента: hook, меседж, візуал, CTA…"
+                  ? "Креатив обрано. Можеш додати нотатки (необов'язково)."
+                  : "…або встав опис креатива конкурента вручну: hook, меседж, візуал, CTA."
               }
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -325,10 +346,23 @@ const CSS = `
   background:#FBFCFE;color:var(--ink);outline:none;transition:border-color .15s;}
 .ws-input:focus{border-color:var(--accent);}
 
-.ws-select{width:100%;margin-bottom:10px;border:1px solid var(--line);border-radius:10px;
-  padding:10px 12px;font:inherit;font-size:14px;background:#FBFCFE;color:var(--ink);
-  outline:none;cursor:pointer;transition:border-color .15s;}
-.ws-select:focus{border-color:var(--accent);}
+.ws-input-sm{min-height:60px;flex:none;}
+
+.ws-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;
+  max-height:340px;overflow:auto;padding:2px;margin-bottom:12px;}
+.ws-card{padding:0;border:1px solid var(--line);border-radius:12px;background:var(--surface);
+  cursor:pointer;overflow:hidden;display:flex;flex-direction:column;text-align:left;
+  transition:border-color .15s,box-shadow .15s;}
+.ws-card:hover{border-color:#c4cad6;}
+.ws-card.is-active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft);}
+.ws-card-thumb{position:relative;aspect-ratio:1/1;background:#F1F3F8;display:grid;
+  place-items:center;overflow:hidden;}
+.ws-card-thumb img{width:100%;height:100%;object-fit:cover;}
+.ws-card-noimg{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;}
+.ws-card-badge{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.62);color:#fff;
+  font-size:10px;padding:2px 7px;border-radius:6px;font-weight:500;}
+.ws-card-name{font-size:11px;line-height:1.3;padding:7px 8px;color:var(--ink);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 
 .ws-actions{display:flex;justify-content:space-between;align-items:center;margin-top:14px;}
 .ws-counter{font-family:var(--mono);font-size:11px;color:var(--muted);}

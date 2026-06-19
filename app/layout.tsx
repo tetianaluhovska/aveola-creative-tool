@@ -3,7 +3,7 @@ import "./globals.css";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "Верстак — AI Workshop",
+  title: "Aveola — Creative Variations",
   description: "Креативи конкурентів → AI-варіації на основі наших виграшних",
 };
 
