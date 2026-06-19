@@ -18,6 +18,7 @@ type Prop = {
   title?: { plain_text: string }[];
   rich_text?: { plain_text: string }[];
   select?: { name: string } | null;
+  multi_select?: { name: string }[];
   url?: string | null;
   date?: { start: string } | null;
 };
@@ -31,6 +32,8 @@ function plain(prop?: Prop): string {
       return (prop.rich_text ?? []).map((t) => t.plain_text).join("").trim();
     case "select":
       return prop.select?.name ?? "";
+    case "multi_select":
+      return (prop.multi_select ?? []).map((s) => s.name).join(", ");
     case "url":
       return prop.url ?? "";
     case "date":
@@ -101,6 +104,33 @@ export async function getCreative(pageId: string): Promise<Creative> {
   const res = await fetch(`${API}/pages/${pageId}`, { headers: headers() });
   if (!res.ok) throw new Error(`Notion ${res.status}: ${await res.text()}`);
   return mapCreative((await res.json()) as Page);
+}
+
+export type CreativeElement = {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  why: string;
+};
+
+function mapElement(page: Page): CreativeElement {
+  const p = page.properties;
+  return {
+    id: page.id,
+    name: plain(p["Елемент"]),
+    category: plain(p["Категорія"]),
+    description: plain(p["Опис елементу"]),
+    why: plain(p["Чому працює"]),
+  };
+}
+
+/** Бібліотека перевірених будівельних елементів (Visual & Audio Elements). */
+export async function listElements(limit = 60): Promise<CreativeElement[]> {
+  const id = process.env.NOTION_DB_ELEMENTS;
+  if (!id) return [];
+  const rows = await queryDb(id, { page_size: limit });
+  return rows.map(mapElement).filter((e) => e.name);
 }
 
 /** Наші ефективні: «📈 Creo Result» не порожнє (Okay/Good/Super). */
