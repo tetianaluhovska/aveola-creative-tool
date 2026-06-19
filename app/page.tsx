@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 
 type Entry = {
@@ -32,6 +32,53 @@ export default function Workspace() {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<Entry[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  const [videoState, setVideoState] = useState<"idle" | "working" | "ready" | "error">("idle");
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoErr, setVideoErr] = useState<string | null>(null);
+  const videoRunRef = useRef(0);
+
+  function resetVideo() {
+    videoRunRef.current++; // скасовує будь-який активний полінг
+    setVideoState("idle");
+    setVideoUrl(null);
+    setVideoErr(null);
+  }
+
+  async function genVideo() {
+    if (!result || videoState === "working") return;
+    const myRun = ++videoRunRef.current;
+    setVideoState("working");
+    setVideoUrl(null);
+    setVideoErr(null);
+    try {
+      const r = await fetch("/api/video", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: result }),
+      });
+      const data = await r.json();
+      if (!r.ok || data.error) throw new Error(data.error || "Не вдалося стартувати генерацію.");
+      const op = data.op as string;
+      for (let i = 0; i < 45; i++) {
+        await new Promise((res) => setTimeout(res, 8000));
+        if (videoRunRef.current !== myRun) return; // скасовано новим запуском
+        const pr = await fetch("/api/video?op=" + encodeURIComponent(op));
+        const pd = await pr.json();
+        if (pd.error) throw new Error(pd.error);
+        if (pd.done && pd.ready) {
+          setVideoUrl("/api/video?file=1&op=" + encodeURIComponent(op));
+          setVideoState("ready");
+          return;
+        }
+      }
+      throw new Error("Перевищено час очікування генерації відео.");
+    } catch (e) {
+      if (videoRunRef.current !== myRun) return;
+      setVideoErr((e as Error).message);
+      setVideoState("error");
+    }
+  }
 
   const loadHistory = useCallback(async () => {
     try {
@@ -76,6 +123,7 @@ export default function Workspace() {
     setError(null);
     setResult(null);
     setActiveId(null);
+    resetVideo();
     try {
       const r = await fetch("/api/ai", {
         method: "POST",
@@ -99,6 +147,7 @@ export default function Workspace() {
     setResult(item.output);
     setActiveId(item.id);
     setError(null);
+    resetVideo();
   }
   function newRun() {
     setInput("");
@@ -106,6 +155,7 @@ export default function Workspace() {
     setResult(null);
     setActiveId(null);
     setError(null);
+    resetVideo();
   }
 
   const title = (text: string) => text.slice(0, 42) + (text.length > 42 ? "…" : "");
@@ -253,6 +303,24 @@ export default function Workspace() {
             {!running && !error && result && (
               <div className="ws-output">{result}</div>
             )}
+
+            {!running && !error && result && (
+              <div className="ws-video">
+                {videoState !== "ready" && (
+                  <button className="ws-vbtn" onClick={genVideo} disabled={videoState === "working"}>
+                    {videoState === "working" ? (
+                      <><span className="ws-spin" /> Генерую відео Veo (1–3 хв)…</>
+                    ) : (
+                      "🎬 Згенерувати відео (Veo)"
+                    )}
+                  </button>
+                )}
+                {videoState === "error" && <p className="ws-verr">{videoErr}</p>}
+                {videoState === "ready" && videoUrl && (
+                  <video className="ws-player" src={videoUrl} controls autoPlay loop playsInline />
+                )}
+              </div>
+            )}
           </section>
 
           {/* History */}
@@ -399,6 +467,14 @@ const CSS = `
 
 .ws-output{white-space:pre-wrap;font-size:14px;line-height:1.6;color:var(--ink);
   background:#FBFCFE;border:1px solid var(--line);border-radius:10px;padding:14px;flex:1;}
+
+.ws-video{margin-top:14px;display:flex;flex-direction:column;gap:10px;}
+.ws-vbtn{align-self:flex-start;background:var(--ink);color:#fff;border:none;border-radius:10px;
+  padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;
+  align-items:center;gap:8px;transition:opacity .15s;}
+.ws-vbtn:disabled{opacity:.6;cursor:not-allowed;}
+.ws-verr{color:var(--danger);font-size:12px;margin:0;}
+.ws-player{width:100%;max-width:300px;border-radius:12px;border:1px solid var(--line);align-self:flex-start;}
 
 /* history */
 .ws-history-list{list-style:none;margin:0;padding:0;display:grid;
