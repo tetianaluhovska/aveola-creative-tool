@@ -174,9 +174,14 @@ export default function Workspace() {
                     title={[c.competitor, c.name].filter(Boolean).join(" · ")}
                   >
                     <span className="ws-card-thumb">
-                      {c.thumb ? (
+                      <span className="ws-card-noimg">
+                        {c.format || "креатив"}
+                        <em>прев&apos;ю недоступне</em>
+                      </span>
+                      {c.thumb && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
+                          className="ws-card-img"
                           src={c.thumb}
                           alt={c.name}
                           loading="lazy"
@@ -184,8 +189,6 @@ export default function Workspace() {
                             e.currentTarget.style.display = "none";
                           }}
                         />
-                      ) : (
-                        <span className="ws-card-noimg">{c.format || "—"}</span>
                       )}
                       {c.competitor && <span className="ws-card-badge">{c.competitor}</span>}
                     </span>
@@ -355,10 +358,12 @@ const CSS = `
   transition:border-color .15s,box-shadow .15s;}
 .ws-card:hover{border-color:#c4cad6;}
 .ws-card.is-active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft);}
-.ws-card-thumb{position:relative;aspect-ratio:1/1;background:#F1F3F8;display:grid;
-  place-items:center;overflow:hidden;}
-.ws-card-thumb img{width:100%;height:100%;object-fit:cover;}
-.ws-card-noimg{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;}
+.ws-card-thumb{position:relative;aspect-ratio:1/1;background:#F1F3F8;overflow:hidden;}
+.ws-card-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.ws-card-noimg{position:absolute;inset:0;display:flex;flex-direction:column;gap:3px;
+  align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;
+  color:var(--muted);text-transform:uppercase;}
+.ws-card-noimg em{font-style:normal;font-size:9px;opacity:.65;text-transform:none;}
 .ws-card-badge{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.62);color:#fff;
   font-size:10px;padding:2px 7px;border-radius:6px;font-weight:500;}
 .ws-card-name{font-size:11px;line-height:1.3;padding:7px 8px;color:var(--ink);
